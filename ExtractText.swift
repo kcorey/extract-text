@@ -133,6 +133,15 @@ func combineTexts(from paths: [String]) -> String {
 class AppDelegate: NSObject, NSApplicationDelegate {
     let combinedText: String
     var window: NSWindow!
+    var scrollView: NSScrollView!
+    var textView: NSTextView!
+    var numberedCheckbox: NSButton!
+    var wrapCheckbox: NSButton!
+
+    let font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+    lazy var charWidth: CGFloat = font.maximumAdvancement.width
+    // "%6d " — 6-digit number + 1 space separator
+    lazy var numberColumnWidth: CGFloat = charWidth * 7
 
     init(text: String) {
         self.combinedText = text
@@ -146,13 +155,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let width = screen.width * 0.7
-        let height = screen.height * 0.8
-        let x = screen.origin.x + (screen.width - width) / 2
-        let y = screen.origin.y + (screen.height - height) / 2
+        // Size the window to fit the widest line, capped at 2/3 of the screen
+        let textPadding: CGFloat = 32  // 16px inset × 2 sides
+        let maxLineWidth = combinedText
+            .components(separatedBy: "\n")
+            .map { ($0 as NSString).size(withAttributes: [.font: font]).width }
+            .max() ?? 400
+        let windowWidth = max(
+            min((maxLineWidth + textPadding) * 1.05, screen.width * 2.0 / 3.0),
+            400
+        )
+        let windowHeight = screen.height * 0.8
 
         window = NSWindow(
-            contentRect: NSRect(x: x, y: y, width: width, height: height),
+            contentRect: NSRect(
+                x: screen.origin.x + (screen.width - windowWidth) / 2,
+                y: screen.origin.y + (screen.height - windowHeight) / 2,
+                width: windowWidth,
+                height: windowHeight
+            ),
             styleMask: [.titled, .closable, .resizable, .miniaturizable],
             backing: .buffered,
             defer: false
@@ -160,44 +181,175 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.title = "Extracted Text"
         window.isReleasedWhenClosed = false
 
-        let scrollView = NSScrollView(frame: window.contentView!.bounds)
-        scrollView.autoresizingMask = [.width, .height]
-        scrollView.hasVerticalScroller = true
-        scrollView.hasHorizontalScroller = false
+        setupUI()
+        setupKeyHandler()
 
-        let textView = NSTextView(frame: scrollView.contentView.bounds)
-        textView.autoresizingMask = [.width]
-        textView.isEditable = false
-        textView.isSelectable = true
-        textView.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
-        textView.textContainerInset = NSSize(width: 16, height: 16)
-        textView.string = combinedText
-        textView.textContainer?.widthTracksTextView = true
-        textView.isHorizontallyResizable = false
-
-        scrollView.documentView = textView
-        window.contentView = scrollView
-
-        // Close on Escape key
-        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            if event.keyCode == 53 {
-                NSApplication.shared.terminate(nil)
-                return nil
-            }
-            return event
-        }
-
-        // Close button terminates the app
         NotificationCenter.default.addObserver(
             forName: NSWindow.willCloseNotification,
             object: window,
             queue: .main
-        ) { _ in
-            NSApplication.shared.terminate(nil)
-        }
+        ) { _ in NSApplication.shared.terminate(nil) }
 
         window.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: UI Setup
+
+    func setupUI() {
+        let contentView = window.contentView!
+
+        // Toolbar
+        let toolbar = NSView()
+        toolbar.translatesAutoresizingMaskIntoConstraints = false
+
+        numberedCheckbox = NSButton(checkboxWithTitle: "Numbered", target: self, action: #selector(updateDisplay))
+        numberedCheckbox.state = .off
+        numberedCheckbox.translatesAutoresizingMaskIntoConstraints = false
+
+        wrapCheckbox = NSButton(checkboxWithTitle: "Wrap", target: self, action: #selector(updateDisplay))
+        wrapCheckbox.state = .off
+        wrapCheckbox.translatesAutoresizingMaskIntoConstraints = false
+
+        toolbar.addSubview(numberedCheckbox)
+        toolbar.addSubview(wrapCheckbox)
+
+        // Separator line below toolbar
+        let separator = NSBox()
+        separator.boxType = .separator
+        separator.translatesAutoresizingMaskIntoConstraints = false
+
+        // Scroll view
+        scrollView = NSScrollView()
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = true
+        scrollView.autohidesScrollers = true
+        scrollView.borderType = .noBorder
+
+        // Text view
+        textView = NSTextView(frame: .zero)
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.font = font
+        textView.textContainerInset = NSSize(width: 16, height: 16)
+        textView.isVerticallyResizable = true
+        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        scrollView.documentView = textView
+
+        contentView.addSubview(toolbar)
+        contentView.addSubview(separator)
+        contentView.addSubview(scrollView)
+
+        NSLayoutConstraint.activate([
+            toolbar.topAnchor.constraint(equalTo: contentView.topAnchor),
+            toolbar.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            toolbar.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            toolbar.heightAnchor.constraint(equalToConstant: 36),
+
+            numberedCheckbox.leadingAnchor.constraint(equalTo: toolbar.leadingAnchor, constant: 12),
+            numberedCheckbox.centerYAnchor.constraint(equalTo: toolbar.centerYAnchor),
+
+            wrapCheckbox.leadingAnchor.constraint(equalTo: numberedCheckbox.trailingAnchor, constant: 16),
+            wrapCheckbox.centerYAnchor.constraint(equalTo: toolbar.centerYAnchor),
+
+            separator.topAnchor.constraint(equalTo: toolbar.bottomAnchor),
+            separator.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            separator.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+
+            scrollView.topAnchor.constraint(equalTo: separator.bottomAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+        ])
+
+        // Resolve auto-layout so contentSize is accurate before populating text
+        contentView.layoutSubtreeIfNeeded()
+        updateDisplay()
+    }
+
+    // MARK: Key Handler
+
+    func setupKeyHandler() {
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self = self else { return event }
+            if event.keyCode == 53 {  // Escape
+                NSApplication.shared.terminate(nil)
+                return nil
+            }
+            // Left/right arrow keys scroll horizontally when wrap is off
+            if self.wrapCheckbox.state == .off {
+                let amount = self.charWidth * 4
+                let clip = self.scrollView.contentView
+                var origin = clip.bounds.origin
+                if event.keyCode == 123 {  // left arrow
+                    origin.x = max(0, origin.x - amount)
+                    clip.scroll(to: origin)
+                    self.scrollView.reflectScrolledClipView(clip)
+                    return nil
+                } else if event.keyCode == 124 {  // right arrow
+                    let maxX = max(0, (self.scrollView.documentView?.frame.width ?? 0) - clip.bounds.width)
+                    origin.x = min(maxX, origin.x + amount)
+                    clip.scroll(to: origin)
+                    self.scrollView.reflectScrolledClipView(clip)
+                    return nil
+                }
+            }
+            return event
+        }
+    }
+
+    // MARK: Display
+
+    @objc func updateDisplay() {
+        let isNumbered = numberedCheckbox.state == .on
+        let isWrapping = wrapCheckbox.state == .on
+
+        if isWrapping {
+            textView.isHorizontallyResizable = false
+            textView.textContainer?.widthTracksTextView = true
+            textView.autoresizingMask = [.width]
+            // Snap the frame width to match the scroll view before layout
+            var f = textView.frame
+            f.size.width = scrollView.contentSize.width
+            textView.frame = f
+        } else {
+            textView.isHorizontallyResizable = true
+            textView.textContainer?.widthTracksTextView = false
+            textView.textContainer?.size = NSSize(width: CGFloat.greatestFiniteMagnitude,
+                                                  height: CGFloat.greatestFiniteMagnitude)
+            textView.autoresizingMask = [.height]
+        }
+
+        // Paragraph style: indent continuation lines when wrapping
+        let ps = NSMutableParagraphStyle()
+        if isWrapping {
+            ps.headIndent = isNumbered ? numberColumnWidth : charWidth
+        }
+
+        // Build attributed string
+        let lines = combinedText.components(separatedBy: "\n")
+        let attrStr = NSMutableAttributedString()
+
+        for (i, line) in lines.enumerated() {
+            let nl = i < lines.count - 1 ? "\n" : ""
+            if isNumbered {
+                attrStr.append(NSAttributedString(
+                    string: String(format: "%6d ", i + 1),
+                    attributes: [.font: font, .foregroundColor: NSColor.tertiaryLabelColor, .paragraphStyle: ps]
+                ))
+            }
+            attrStr.append(NSAttributedString(
+                string: line + nl,
+                attributes: [.font: font, .foregroundColor: NSColor.labelColor, .paragraphStyle: ps]
+            ))
+        }
+
+        textView.textStorage?.setAttributedString(attrStr)
+
+        if !isWrapping {
+            textView.sizeToFit()
+        }
     }
 }
 

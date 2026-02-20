@@ -44,7 +44,16 @@ If "Extract Text" doesn't appear in the right-click menu after installation:
 
 Pass one or more files. When multiple files are given, they are combined into a single view separated by `--- filename ---` headers.
 
-The extracted text opens in a native macOS window (70% of screen width, 80% of screen height). Text is selectable but not editable. Press **Escape** or close the window to quit.
+The extracted text opens in a native macOS window sized to fit the widest line of text (plus 5%), capped at two-thirds of the screen width, 80% tall. Text is selectable but not editable. Press **Escape** or close the window to quit.
+
+At the top of the window are two checkboxes:
+
+| Checkbox | Default | Behaviour |
+|---|---|---|
+| **Numbered** | off | Shows grey 6-digit line numbers to the left of each line |
+| **Wrap** | off | Wraps lines at the window edge; continuation lines are indented by one character |
+
+When **Wrap** is off, a horizontal scrollbar appears at the bottom whenever the text is wider than the window. You can also scroll left/right with the **←** / **→** arrow keys (4 characters per keypress).
 
 ### Finder Quick Action
 
