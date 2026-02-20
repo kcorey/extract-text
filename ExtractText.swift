@@ -137,6 +137,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var textView: NSTextView!
     var numberedCheckbox: NSButton!
     var wrapCheckbox: NSButton!
+    var currentToast: NSView?
 
     let font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
     lazy var charWidth: CGFloat = font.maximumAdvancement.width
@@ -192,6 +193,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         window.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate(ignoringOtherApps: true)
+        window.makeFirstResponder(textView)
     }
 
     // MARK: UI Setup
@@ -266,6 +268,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Resolve auto-layout so contentSize is accurate before populating text
         contentView.layoutSubtreeIfNeeded()
         updateDisplay()
+        setupSelectionObserver()
     }
 
     // MARK: Key Handler
@@ -276,6 +279,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             if event.keyCode == 53 {  // Escape
                 NSApplication.shared.terminate(nil)
                 return nil
+            }
+            // Cmd-A / Cmd-C (accessory-policy apps have no menu bar to route these)
+            if event.modifierFlags.contains(.command) {
+                switch event.charactersIgnoringModifiers {
+                case "a": self.textView.selectAll(nil); return nil
+                case "c": self.textView.copy(nil);      return nil
+                default: break
+                }
             }
             // Left/right arrow keys scroll horizontally when wrap is off
             if self.wrapCheckbox.state == .off {
@@ -349,6 +360,67 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         if !isWrapping {
             textView.sizeToFit()
+        }
+    }
+
+    // MARK: Selection → auto-copy
+
+    func setupSelectionObserver() {
+        NotificationCenter.default.addObserver(
+            forName: NSTextView.didChangeSelectionNotification,
+            object: textView,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            // Only fire on mouse-up (i.e. the user finished dragging a selection)
+            guard NSApp.currentEvent?.type == .leftMouseUp else { return }
+            guard self.textView.selectedRange().length > 0 else { return }
+            self.textView.copy(nil)
+            self.showCopiedToast()
+        }
+    }
+
+    // MARK: Toast
+
+    func showCopiedToast() {
+        guard let contentView = window.contentView else { return }
+
+        // Remove any in-flight toast
+        currentToast?.removeFromSuperview()
+
+        let toast = NSView()
+        toast.wantsLayer = true
+        toast.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.75).cgColor
+        toast.layer?.cornerRadius = 8
+        toast.translatesAutoresizingMaskIntoConstraints = false
+
+        let label = NSTextField(labelWithString: "Copied!")
+        label.textColor = .white
+        label.font = NSFont.systemFont(ofSize: 14, weight: .medium)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        toast.addSubview(label)
+
+        contentView.addSubview(toast)
+        currentToast = toast
+
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: toast.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: toast.centerYAnchor),
+            toast.widthAnchor.constraint(equalTo: label.widthAnchor, constant: 24),
+            toast.heightAnchor.constraint(equalTo: label.heightAnchor, constant: 12),
+            toast.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            toast.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20),
+        ])
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self, weak toast] in
+            guard let toast = toast, toast === self?.currentToast else { return }
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.4
+                toast.animator().alphaValue = 0
+            } completionHandler: { [weak self] in
+                toast.removeFromSuperview()
+                if toast === self?.currentToast { self?.currentToast = nil }
+            }
         }
     }
 }
