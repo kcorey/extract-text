@@ -46,14 +46,22 @@ Pass one or more files. When multiple files are given, they are combined into a 
 
 The extracted text opens in a native macOS window sized to fit the widest line of text (plus 5%), capped at two-thirds of the screen width, 80% tall. Text is selectable but not editable. Press **Escape** or close the window to quit.
 
-At the top of the window are two checkboxes:
+At the top-right of the window are two checkboxes:
 
-| Checkbox | Default | Behaviour |
-|---|---|---|
-| **Numbered** | off | Shows grey 6-digit line numbers to the left of each line |
-| **Wrap** | off | Wraps lines at the window edge; continuation lines are indented by one character |
+| Checkbox | Default | Shortcut | Behaviour |
+|---|---|---|---|
+| **Numbered** | off | Cmd-N | Shows grey 6-digit line numbers to the left of each line |
+| **Wrap** | off | Cmd-W | Wraps lines at the window edge; continuation lines are indented by one character |
 
 When **Wrap** is off, a horizontal scrollbar appears at the bottom whenever the text is wider than the window. You can also scroll left/right with the **←** / **→** arrow keys (4 characters per keypress).
+
+### Selecting and copying text
+
+| Action | Result |
+|---|---|
+| **Cmd-A** | Select all text |
+| **Cmd-C** | Copy selection to clipboard |
+| **Mouse drag** | Selects text, then automatically copies it to the clipboard and shows a brief "Copied!" toast |
 
 ### Finder Quick Action
 
