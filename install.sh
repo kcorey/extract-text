@@ -5,6 +5,13 @@ cd "$(dirname "$0")"
 # Build first
 ./build.sh
 
+# Install binary to /usr/local/bin
+echo ""
+echo "Installing binary to /usr/local/bin..."
+sudo cp extract-text /usr/local/bin/extract-text
+sudo chmod 755 /usr/local/bin/extract-text
+echo "Installed: /usr/local/bin/extract-text"
+
 # Copy workflow to Services
 DEST="$HOME/Library/Services/Extract Text.workflow"
 echo ""

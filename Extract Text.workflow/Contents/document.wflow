@@ -59,7 +59,7 @@
 				<key>ActionParameters</key>
 				<dict>
 					<key>COMMAND_STRING</key>
-					<string>/Volumes/PS2000W/Developer/reader/extract-text "$@"</string>
+					<string>PATH="/usr/local/bin:/opt/homebrew/bin:$PATH" extract-text "$@"</string>
 					<key>CheckedForUserDefaultShell</key>
 					<true/>
 					<key>inputMethod</key>

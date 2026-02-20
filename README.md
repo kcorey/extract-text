@@ -26,7 +26,7 @@ This runs `swiftc -O -o extract-text ExtractText.swift` and produces the `extrac
 ./install.sh
 ```
 
-This builds the binary and installs the Automator workflow to `~/Library/Services/Extract Text.workflow`, making it available as a Quick Action in Finder.
+This builds the binary, copies it to `/usr/local/bin/extract-text` (requires `sudo`), and installs the Automator workflow to `~/Library/Services/Extract Text.workflow`, making it available as a Quick Action in Finder.
 
 If "Extract Text" doesn't appear in the right-click menu after installation:
 
@@ -65,19 +65,6 @@ After running `./install.sh`:
 Unrecognised extensions are treated as plain text.
 
 ## Gotchas & Warnings
-
-**Hardcoded path in the workflow**
-
-The Automator workflow (`Extract Text.workflow/Contents/document.wflow`) hardcodes the binary path:
-
-```
-/Volumes/PS2000W/Developer/reader/extract-text
-```
-
-If you clone the repo to a different location, the Quick Action will fail silently. Fix it one of two ways:
-
-- Edit the `COMMAND_STRING` in `document.wflow` to match your actual path before running `install.sh`, or
-- Open the installed workflow in Automator (`~/Library/Services/Extract Text.workflow`) and update the shell script path there.
 
 **Scanned / image-only PDFs**
 
