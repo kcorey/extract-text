@@ -249,11 +249,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             toolbar.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             toolbar.heightAnchor.constraint(equalToConstant: 36),
 
-            numberedCheckbox.leadingAnchor.constraint(equalTo: toolbar.leadingAnchor, constant: 12),
-            numberedCheckbox.centerYAnchor.constraint(equalTo: toolbar.centerYAnchor),
-
-            wrapCheckbox.leadingAnchor.constraint(equalTo: numberedCheckbox.trailingAnchor, constant: 16),
+            wrapCheckbox.trailingAnchor.constraint(equalTo: toolbar.trailingAnchor, constant: -12),
             wrapCheckbox.centerYAnchor.constraint(equalTo: toolbar.centerYAnchor),
+
+            numberedCheckbox.trailingAnchor.constraint(equalTo: wrapCheckbox.leadingAnchor, constant: -16),
+            numberedCheckbox.centerYAnchor.constraint(equalTo: toolbar.centerYAnchor),
 
             separator.topAnchor.constraint(equalTo: toolbar.bottomAnchor),
             separator.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
@@ -285,6 +285,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 switch event.charactersIgnoringModifiers {
                 case "a": self.textView.selectAll(nil); return nil
                 case "c": self.textView.copy(nil);      return nil
+                case "n": self.numberedCheckbox.performClick(nil); return nil
+                case "w": self.wrapCheckbox.performClick(nil);     return nil
                 default: break
                 }
             }
